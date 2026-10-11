@@ -132,6 +132,27 @@
     return list.length ? '<div class="src">Источник: ' + list.map(esc).join(' · ') + '</div>' : '';
   }
   function caseLabel(c) { return 'Кейс ' + c.id + '. ' + c.title; }
+  // Текст блока «Ситуация» — первая строка условия задачи.
+  function caseSituation(c) {
+    return plain((c.items.find(i => i.c && /^ситуация$/i.test((i.name || '').trim())) || {}).text || '');
+  }
+  function searchCases(query) {
+    const terms = norm(query).split(' ').filter(Boolean);
+    if (!terms.length) return [];
+    return CASES.filter(c => { const key = norm(caseSituation(c)); return terms.every(t => key.includes(t)); });
+  }
+  function caseResultCard(c, query) {
+    return el(
+      '<article class="card result result--case">' +
+        '<div class="q__sec">Ситуация</div>' +
+        '<div class="result__q">' + highlight(caseSituation(c), query) + '</div>' +
+        '<div class="case__title">' + esc(caseLabel(c)) + '</div>' +
+        '<div class="case__actions">' +
+          '<a class="btn btn--primary" href="#review/' + c.id + '">Ответы</a>' +
+          '<a class="btn" href="#case/' + c.id + '">Решать</a>' +
+        '</div>' +
+      '</article>');
+  }
 
   // ---------- поиск ----------
   function searchQuestions(query, withOptions) {
@@ -180,7 +201,7 @@
     const box = el(
       '<section class="search">' +
         '<h1>Поиск верного ответа</h1>' +
-        '<input class="search__input" type="search" placeholder="Начните вводить текст вопроса…" autocomplete="off" spellcheck="false">' +
+        '<input class="search__input" type="search" placeholder="Текст вопроса или ситуации из условия задачи…" autocomplete="off" spellcheck="false">' +
         '<label class="check"><input type="checkbox" class="search__opts" checked> искать и в вариантах ответа</label>' +
         '<div class="search__info"></div>' +
         '<div class="search__list"></div>' +
@@ -196,13 +217,16 @@
       list.innerHTML = '';
       if (!norm(query)) {
         info.textContent = 'В базе ' + plural(QUESTIONS.length, 'вопрос', 'вопроса', 'вопросов') + ' из ' +
-          plural(CASES.length, 'кейса', 'кейсов', 'кейсов') + '. Достаточно нескольких слов или их начала, порядок не важен.';
+          plural(CASES.length, 'кейса', 'кейсов', 'кейсов') + '. Ищет по тексту вопросов и по «Ситуации» из условия задачи. Достаточно нескольких слов или их начала, порядок не важен.';
         return;
       }
       const found = searchQuestions(query, opts.checked);
-      info.textContent = found.length
-        ? 'Найдено: ' + found.length + (found.length > LIMIT ? ' (показаны первые ' + LIMIT + ')' : '')
-        : 'Ничего не найдено. Попробуйте меньше слов или другое слово из вопроса.';
+      const cases = searchCases(query);
+      info.textContent = found.length || cases.length
+        ? (cases.length ? 'Кейсов по ситуации: ' + cases.length + '. ' : '') +
+          'Вопросов: ' + found.length + (found.length > LIMIT ? ' (показаны первые ' + LIMIT + ')' : '')
+        : 'Ничего не найдено. Попробуйте меньше слов или другое слово из вопроса или ситуации.';
+      cases.forEach(c => list.appendChild(caseResultCard(c, query)));
       found.slice(0, LIMIT).forEach(item => list.appendChild(resultCard(item, query)));
     }
     input.addEventListener('input', run);
@@ -297,7 +321,7 @@
     for (const c of CASES) {
       const total = c.items.filter(i => i.q).length;
       const best = store.best[c.id];
-      const sit = plain((c.items.find(i => i.c && /^ситуация$/i.test((i.name || '').trim())) || {}).text || '');
+      const sit = caseSituation(c);
       const card = el(
         '<article class="card case">' +
           '<div class="case__num">Кейс ' + c.id + '</div>' +
