@@ -169,3 +169,5 @@ mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1
   .brand__sub { display: none; }
   .card { padding: 14px; }
 }
+
+[hidden] { display: none !important; }

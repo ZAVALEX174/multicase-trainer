@@ -286,15 +286,18 @@
     app.innerHTML = '';
     const head = el(
       '<section><h1>Кейсы</h1>' +
+      '<input class="search__input" id="case-filter" type="search" placeholder="Поиск по названию кейса…" autocomplete="off" spellcheck="false">' +
+      '<div class="search__info" id="case-info"></div>' +
       '<label class="check"><input type="checkbox" id="shuffle"' + (store.shuffle ? ' checked' : '') + '> перемешивать варианты ответа</label>' +
       '<div class="grid"></div></section>');
     head.querySelector('#shuffle').addEventListener('change', e => { store.shuffle = e.target.checked; saveStore(); });
     const grid = head.querySelector('.grid');
     if (!CASES.length) grid.innerHTML = '<p>Кейсов пока нет. Добавьте файлы в data/cases и выполните node tools/build.js.</p>';
+    const cards = [];
     for (const c of CASES) {
       const total = c.items.filter(i => i.q).length;
       const best = store.best[c.id];
-      grid.appendChild(el(
+      const card = el(
         '<article class="card case">' +
           '<div class="case__num">Кейс ' + c.id + '</div>' +
           '<div class="case__title">' + esc(c.title) + '</div>' +
@@ -305,8 +308,26 @@
             '<a class="btn" href="#review/' + c.id + '">Ответы</a>' +
           '</div>' +
           '<div class="case__total">' + plural(total, 'вопрос', 'вопроса', 'вопросов') + '</div>' +
-        '</article>'));
+        '</article>');
+      cards.push({ card, key: norm('кейс ' + c.id + ' ' + c.title) });
+      grid.appendChild(card);
     }
+    const filter = head.querySelector('#case-filter');
+    const info = head.querySelector('#case-info');
+    function applyFilter() {
+      const terms = norm(filter.value).split(' ').filter(Boolean);
+      let shown = 0;
+      for (const x of cards) {
+        const ok = terms.every(t => x.key.includes(t));
+        x.card.hidden = !ok;
+        if (ok) shown++;
+      }
+      info.textContent = !terms.length ? 'Всего: ' + plural(cards.length, 'кейс', 'кейса', 'кейсов')
+        : shown ? 'Найдено: ' + shown + ' из ' + cards.length
+        : 'Кейсов с таким названием нет. Попробуйте другое слово или его начало.';
+    }
+    filter.addEventListener('input', applyFilter);
+    applyFilter();
     app.appendChild(head);
   }
   function viewCase(id) {
