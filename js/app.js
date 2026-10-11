@@ -286,7 +286,7 @@
     app.innerHTML = '';
     const head = el(
       '<section><h1>Кейсы</h1>' +
-      '<input class="search__input" id="case-filter" type="search" placeholder="Поиск по названию кейса…" autocomplete="off" spellcheck="false">' +
+      '<input class="search__input" id="case-filter" type="search" placeholder="Поиск по названию или ситуации…" autocomplete="off" spellcheck="false">' +
       '<div class="search__info" id="case-info"></div>' +
       '<label class="check"><input type="checkbox" id="shuffle"' + (store.shuffle ? ' checked' : '') + '> перемешивать варианты ответа</label>' +
       '<div class="grid"></div></section>');
@@ -297,10 +297,12 @@
     for (const c of CASES) {
       const total = c.items.filter(i => i.q).length;
       const best = store.best[c.id];
+      const sit = plain((c.items.find(i => i.c && /^ситуация$/i.test((i.name || '').trim())) || {}).text || '');
       const card = el(
         '<article class="card case">' +
           '<div class="case__num">Кейс ' + c.id + '</div>' +
           '<div class="case__title">' + esc(c.title) + '</div>' +
+          (sit ? '<div class="case__sit">' + esc(sit) + '</div>' : '') +
           '<div class="case__sec">' + c.sections.map(s => esc(s[1]) + ' — ' + s[2]).join(' · ') + '</div>' +
           '<div class="case__best">' + (best ? 'Лучший результат: ' + best.score + ' из ' + best.total : 'Ещё не решали') + '</div>' +
           '<div class="case__actions">' +
@@ -309,7 +311,7 @@
           '</div>' +
           '<div class="case__total">' + plural(total, 'вопрос', 'вопроса', 'вопросов') + '</div>' +
         '</article>');
-      cards.push({ card, key: norm('кейс ' + c.id + ' ' + c.title) });
+      cards.push({ card, key: norm('кейс ' + c.id + ' ' + c.title + ' ' + sit) });
       grid.appendChild(card);
     }
     const filter = head.querySelector('#case-filter');
@@ -324,7 +326,7 @@
       }
       info.textContent = !terms.length ? 'Всего: ' + plural(cards.length, 'кейс', 'кейса', 'кейсов')
         : shown ? 'Найдено: ' + shown + ' из ' + cards.length
-        : 'Кейсов с таким названием нет. Попробуйте другое слово или его начало.';
+        : 'Кейсов с таким названием или ситуацией нет. Попробуйте другое слово или его начало.';
     }
     filter.addEventListener('input', applyFilter);
     applyFilter();
